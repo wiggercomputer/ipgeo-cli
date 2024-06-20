@@ -65,7 +65,7 @@ function parseArgumentsIntoOptions(rawArgs) {
     };
 
   } catch (err) {
-    console.log('Usage: ipgeo <ipaddress|ips.txt> [--out=filename.txt --format=json,csv --no-color]');
+    console.log('Usage: ipinfo <ipaddress|ips.txt> [--out=filename.txt --format=json,csv --no-color]');
     process.exit(1);
   }
 }
@@ -99,20 +99,31 @@ function formatOutput(data, format) {
   return '';
 }
 
-async function processIp(ip, apiKey) {
-  try {
-    return await fetchIpInfo(ip, apiKey);
-  } catch (error) {
-    console.error(chalk.red(`Error fetching IP information for ${ip}: ${error.message}`));
-    return null;
-  }
+async function processIps(ips, apiKey, options) {
+  const progressBar = new cliProgress.SingleBar({
+    format: 'Progress |' + chalk.cyan('{bar}') + '| {percentage}% || IP: {ip} || Duration: {duration_formatted}',
+  }, cliProgress.Presets.shades_classic);
+
+  progressBar.start(ips.length, 0);
+
+  const promises = ips.map(async (ip, index) => {
+    const output = await fetchIpInfo(ip, apiKey);
+    progressBar.update(index + 1, { ip });
+    return output;
+  });
+
+  const results = await Promise.all(promises);
+
+  progressBar.stop();
+
+  return results.filter(result => result !== null);
 }
 
 async function main() {
   const options = parseArgumentsIntoOptions(process.argv);
 
   if (!options.input) {
-    parseArgumentsIntoOptions(['', '', '--help']);
+    console.error(chalk.red('No input provided.'));
     process.exit(1);
   }
 
@@ -131,22 +142,7 @@ async function main() {
     process.exit(1);
   }
 
-  const results = [];
-  const progressBar = new cliProgress.SingleBar({
-    format: 'Progress |' + chalk.cyan('{bar}') + '| {percentage}% || IP: {ip} || Duration: {duration_formatted}',
-  }, cliProgress.Presets.shades_classic);
-
-  progressBar.start(ips.length, 0);
-
-  for (let i = 0; i < ips.length; i++) {
-    const output = await processIp(ips[i], apiKey);
-    if (output) {
-      results.push(output);
-    }
-    progressBar.update(i + 1, { ip: ips[i] });
-  }
-
-  progressBar.stop();
+  const results = await processIps(ips, apiKey, options);
 
   if (results.length > 0) {
     const formattedOutput = formatOutput(results, options.format);
@@ -157,11 +153,7 @@ async function main() {
     } else {
       if (options.noColor) {
         console.log(formattedOutput);
-      } 
-      if (options.outFile == null && options.format.includes('csv')){
-        console.log(formattedOutput);
-      }
-      else {
+      } else {
         const jsonArray = JSON.parse(formattedOutput);
         jsonArray.forEach(obj => {
           console.log(colorize(JSON.stringify(obj, null, 2), {
