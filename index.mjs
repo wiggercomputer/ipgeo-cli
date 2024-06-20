@@ -65,7 +65,7 @@ function parseArgumentsIntoOptions(rawArgs) {
     };
 
   } catch (err) {
-    console.log('Usage: ipinfo <ipaddress|ips.txt> [--out=filename.txt --format=json,csv --no-color]');
+    console.log('Usage: ipgeo <ipaddress|ips.txt> [--out=filename.txt --format=json,csv --no-color]');
     process.exit(1);
   }
 }
@@ -99,36 +99,20 @@ function formatOutput(data, format) {
   return '';
 }
 
-async function processIpsInChunks(ips, apiKey, options, chunkSize = 100) {
-  const progressBar = new cliProgress.SingleBar({
-    format: 'Progress |' + chalk.cyan('{bar}') + '| {percentage}% || IP: {ip} || Duration: {duration_formatted}',
-  }, cliProgress.Presets.shades_classic);
-
-  progressBar.start(ips.length, 0);
-
-  const results = [];
-  for (let i = 0; i < ips.length; i += chunkSize) {
-    const chunk = ips.slice(i, i + chunkSize);
-    const chunkPromises = chunk.map(async (ip, index) => {
-      const output = await fetchIpInfo(ip, apiKey);
-      progressBar.update(i + index + 1, { ip });
-      return output;
-    });
-
-    const chunkResults = await Promise.all(chunkPromises);
-    results.push(...chunkResults.filter(result => result !== null));
+async function processIp(ip, apiKey) {
+  try {
+    return await fetchIpInfo(ip, apiKey);
+  } catch (error) {
+    console.error(chalk.red(`Error fetching IP information for ${ip}: ${error.message}`));
+    return null;
   }
-
-  progressBar.stop();
-
-  return results;
 }
 
 async function main() {
   const options = parseArgumentsIntoOptions(process.argv);
 
   if (!options.input) {
-    parseArgumentsIntoOptions({});
+    parseArgumentsIntoOptions(['', '', '--help']);
     process.exit(1);
   }
 
@@ -147,7 +131,22 @@ async function main() {
     process.exit(1);
   }
 
-  const results = await processIpsInChunks(ips, apiKey, options);
+  const results = [];
+  const progressBar = new cliProgress.SingleBar({
+    format: 'Progress |' + chalk.cyan('{bar}') + '| {percentage}% || IP: {ip} || Duration: {duration_formatted}',
+  }, cliProgress.Presets.shades_classic);
+
+  progressBar.start(ips.length, 0);
+
+  for (let i = 0; i < ips.length; i++) {
+    const output = await processIp(ips[i], apiKey);
+    if (output) {
+      results.push(output);
+    }
+    progressBar.update(i + 1, { ip: ips[i] });
+  }
+
+  progressBar.stop();
 
   if (results.length > 0) {
     const formattedOutput = formatOutput(results, options.format);
@@ -158,7 +157,11 @@ async function main() {
     } else {
       if (options.noColor) {
         console.log(formattedOutput);
-      } else {
+      } 
+      if (options.outFile == null && options.format.includes('csv')){
+        console.log(formattedOutput);
+      }
+      else {
         const jsonArray = JSON.parse(formattedOutput);
         jsonArray.forEach(obj => {
           console.log(colorize(JSON.stringify(obj, null, 2), {
