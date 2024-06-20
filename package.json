@@ -1,6 +1,6 @@
 {
   "name": "ipgeo-cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A CLI tool for fetching IP information using the IPinfo API",
   "main": "index.mjs",
   "bin": {
