@@ -1,0 +1,44 @@
+{
+  "name": "ipgeo-cli",
+  "version": "1.0.0",
+  "description": "A CLI tool for fetching IP information using the IPinfo API",
+  "main": "index.mjs",
+  "bin": {
+    "ipgeo": "./index.mjs"
+  },
+  "scripts": {
+    "start": "node index.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wiggercomputer/ipgeo-cli.git"
+  },
+  "keywords": [
+    "ipinfo",
+    "cli",
+    "ip",
+    "info",
+    "ipgeo-cli"
+  ],
+  "author": "wiggercomputer",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/wiggercomputer/ipgeo-cli/issues"
+  },
+  "homepage": "https://github.com/wiggercomputer/ipgeo-cli#readme",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "chalk": "^4.1.0",
+    "cli-progress": "^3.9.0",
+    "arg": "^4.1.3",
+    "inquirer": "^8.0.0",
+    "update-notifier": "^5.1.0",
+    "configstore": "^5.0.1",
+    "json-colorizer": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
+
